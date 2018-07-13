@@ -101,8 +101,14 @@ class Command(pdu.PDU):
         super(Command, self).__init__(**kwargs)
 
         self.command = command
-        if need_sequence and (kwargs.get('sequence') is None):
-            self.sequence = self._next_seq()
+
+        if need_sequence:
+            if kwargs.get('sequence'):
+                sequence = kwargs.get('sequence')
+            else:
+                sequence = self._next_seq()
+
+            self.sequence = sequence
 
         self.status = consts.SMPP_ESME_ROK
 
