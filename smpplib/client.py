@@ -491,3 +491,18 @@ class Client(object):
         ssm = smpp.make_pdu('submit_sm', client=self, **kwargs)
         self.send_pdu(ssm)
         return ssm
+
+    async def send_message_async(self, **kwargs):
+        """Send message
+
+        Required Arguments:
+            source_addr_ton -- Source address TON
+            source_addr -- Source address (string)
+            dest_addr_ton -- Destination address TON
+            destination_addr -- Destination address (string)
+            short_message -- Message text (string)
+        """
+
+        ssm = smpp.make_pdu('submit_sm', client=self, **kwargs)
+        await self.send_pdu_async(ssm)
+        return ssm
