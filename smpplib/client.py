@@ -21,7 +21,7 @@
 # Added support for Optional TLV's
 
 """SMPP client module"""
-
+import asyncio
 import socket
 import select
 import struct
@@ -108,6 +108,24 @@ class Client(object):
         except socket.error:
             raise exceptions.ConnectionError("Connection refused")
 
+    async def connect_async(self):
+        """Connect to SMSC"""
+
+        logger.info('Connecting async to %s:%s...', self.host, self.port)
+
+        reader, writer = await asyncio.open_connection(self.host, self.port)
+        self._reader = reader
+        self._writer = writer
+
+        self.state = consts.SMPP_CLIENT_STATE_OPEN
+        # try:
+        #     if self._socket is None:
+        #         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #     self._socket.connect((self.host, self.port))
+        #     self.state = consts.SMPP_CLIENT_STATE_OPEN
+        # except socket.error:
+        #     raise exceptions.ConnectionError("Connection refused")
+
     def disconnect(self):
         """Disconnect from the SMSC"""
         logger.info('Disconnecting...')
@@ -138,6 +156,27 @@ class Client(object):
                 consts.DESCRIPTIONS.get(resp.status, 'Unknown code')), int(resp.status))
         return resp
 
+    async def _bind_async(self, command_name, **kwargs):
+        """Send bind_transmitter command to the SMSC"""
+
+        if command_name in ('bind_receiver', 'bind_transceiver'):
+            logger.debug('Receiver mode')
+            self.receiver_mode = True
+
+        #smppinst = smpp.get_instance()
+        p = smpp.make_pdu(command_name, client=self, **kwargs)
+
+        await self.send_pdu_async(p)
+        try:
+            resp = await self.read_pdu_async()
+        except socket.timeout:
+            raise exceptions.ConnectionError()
+        if resp.is_error():
+            raise exceptions.PDUError(
+                '({}) {}: {}'.format(resp.status, resp.command,
+                consts.DESCRIPTIONS.get(resp.status, 'Unknown code')), int(resp.status))
+        return resp
+
     def bind_transmitter(self, **kwargs):
         """Bind as a transmitter"""
         return self._bind('bind_transmitter', **kwargs)
@@ -149,6 +188,10 @@ class Client(object):
     def bind_transceiver(self, **kwargs):
         """Bind as a transmitter and receiver at once"""
         return self._bind('bind_transceiver', **kwargs)
+
+    async def bind_transceiver_async(self, **kwargs):
+        """Bind as a transmitter and receiver at once"""
+        await self._bind_async('bind_transceiver', **kwargs)
 
     def unbind(self):
         """Unbind from the SMSC"""
@@ -182,6 +225,34 @@ class Client(object):
             try:
                 sent_last = self._socket.send(generated[sent:])
             except socket.error as e:
+                logger.warning(e)
+                raise exceptions.ConnectionError()
+            if sent_last == 0:
+                raise exceptions.ConnectionError()
+            sent += sent_last
+
+    async def send_pdu_async(self, p):
+        """Send PDU to the SMSC"""
+
+        if not self.state in consts.COMMAND_STATES[p.command]:
+            raise exceptions.PDUError("Command %s failed: %s" %
+                (p.command, consts.DESCRIPTIONS[consts.SMPP_ESME_RINVBNDSTS]))
+
+        logger.debug('Sending %s PDU', p.command)
+
+        generated = p.generate()
+
+        logger.debug('>>%s (%d bytes)', binascii.b2a_hex(generated),
+            len(generated))
+
+        sent = 0
+
+        while sent < len(generated):
+            sent_last = 0
+            try:
+                self._writer.write(generated[sent:])
+                sent_last = len(generated[sent:])
+            except Exception as e:
                 logger.warning(e)
                 raise exceptions.ConnectionError()
             if sent_last == 0:
@@ -228,6 +299,36 @@ class Client(object):
 
         return p
 
+    async def read_pdu_async(self):
+        """Read PDU from the SMSC"""
+
+        logger.debug('Waiting for PDU...')
+
+        raw_len = await self._reader.read(4)
+
+        try:
+            length = struct.unpack('>L', raw_len)[0]
+        except struct.error:
+            logger.warning('Receive broken pdu... %s', repr(raw_len))
+            raise exceptions.PDUError('Broken PDU')
+
+        raw_pdu = await self._reader.read(length - 4)
+        raw_pdu = raw_len + raw_pdu
+
+        logger.debug('<<%s (%d bytes)', binascii.b2a_hex(raw_pdu), len(raw_pdu))
+
+        p = smpp.parse_pdu(raw_pdu, client=self)
+
+        logger.debug('Read %s PDU', p.command)
+
+        if p.is_error():
+            return p
+
+        elif p.command in consts.STATE_SETTERS:
+            self.state = consts.STATE_SETTERS[p.command]
+
+        return p
+
     def accept(self, obj):
         """Accept an object"""
         raise NotImplementedError('not implemented')
@@ -241,6 +342,16 @@ class Client(object):
         #, message_id=args['pdu'].sm_default_msg_id)
         dsmr.sequence = p.sequence
         self.send_pdu(dsmr)
+
+    async def _message_received_async(self, p):
+        """Handler for received message event"""
+        status = self.message_received_handler(pdu=p)
+        if status is None:
+            status = consts.SMPP_ESME_ROK
+        dsmr = smpp.make_pdu('deliver_sm_resp', client=self, status=status)
+        #, message_id=args['pdu'].sm_default_msg_id)
+        dsmr.sequence = p.sequence
+        await self.send_pdu_async(dsmr)
 
     def _enquire_link_received(self):
         """Response to enquire_link"""
@@ -273,7 +384,6 @@ class Client(object):
         May be overridden"""
         logger.warning('Message sent handler (Override me)')
 
-
     def read_once(self, ignore_error_codes=None):
         """Read a PDU and act"""
         try:
@@ -297,6 +407,46 @@ class Client(object):
                 self.message_sent_handler(pdu=p)
             elif p.command == 'deliver_sm':
                 self._message_received(p)
+            elif p.command == 'enquire_link':
+                self._enquire_link_received()
+            elif p.command == 'enquire_link_resp':
+                pass
+            elif p.command == 'alert_notification':
+                self._alert_notification(p)
+            else:
+                logger.warning('Unhandled SMPP command "%s"', p.command)
+        except exceptions.PDUError as e:
+            if ignore_error_codes \
+                    and len(e.args) > 1 \
+                    and e.args[1] in ignore_error_codes:
+                logging.warning('(%d) %s. Ignored.' %
+                    (e.args[1], e.args[0]))
+            else:
+                raise
+
+    async def read_once_async(self, ignore_error_codes=None):
+        """Read a PDU and act"""
+        try:
+            try:
+                p = await asyncio.wait_for(self.read_pdu_async(), 5)
+            except asyncio.TimeoutError:
+                logger.debug('Socket timeout, listening again')
+                p = smpp.make_pdu('enquire_link', client=self)
+                await self.send_pdu_async(p)
+                return
+
+            if p.is_error():
+                raise exceptions.PDUError(
+                    '({}) {}: {}'.format(p.status, p.command,
+                    consts.DESCRIPTIONS.get(p.status, 'Unknown status')), int(p.status))
+
+            if p.command == 'unbind':  # unbind_res
+                logger.info('Unbind command received')
+                return
+            elif p.command == 'submit_sm_resp':
+                self.message_sent_handler(pdu=p)
+            elif p.command == 'deliver_sm':
+                await self._message_received_async(p)
             elif p.command == 'enquire_link':
                 self._enquire_link_received()
             elif p.command == 'enquire_link_resp':
