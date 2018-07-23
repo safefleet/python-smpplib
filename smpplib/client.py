@@ -345,7 +345,7 @@ class Client(object):
 
     async def _message_received_async(self, p):
         """Handler for received message event"""
-        status = self.message_received_handler(pdu=p)
+        status = await self.message_received_handler(pdu=p)
         if status is None:
             status = consts.SMPP_ESME_ROK
         dsmr = smpp.make_pdu('deliver_sm_resp', client=self, status=status)
@@ -444,7 +444,7 @@ class Client(object):
                 logger.info('Unbind command received')
                 return
             elif p.command == 'submit_sm_resp':
-                self.message_sent_handler(pdu=p)
+                await self.message_sent_handler(pdu=p)
             elif p.command == 'deliver_sm':
                 await self._message_received_async(p)
             elif p.command == 'enquire_link':
