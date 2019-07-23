@@ -7,7 +7,7 @@ install:
   - pip install pycodestyle
 
 script:
-  - pwd
+  - py.test tests/ -v
 
 deploy:
   provider: pypi
