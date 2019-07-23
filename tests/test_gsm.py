@@ -7,8 +7,8 @@ try:
 except ImportError:
     import mock
 
-from smpplib import consts
-from smpplib.gsm import gsm_encode, make_parts, make_parts_encoded
+from aiosmpp import consts
+from aiosmpp.gsm import gsm_encode, make_parts, make_parts_encoded
 
 
 @pytest.mark.parametrize('plaintext, encoded_text', [
