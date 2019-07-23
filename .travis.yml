@@ -6,7 +6,7 @@ install:
 - pip install pycodestyle
 deploy:
   provider: pypi
-  user: "${PYPI_USERNAME}"
+  user: tpark
   password:
     secure: X3BAZZWwVvF03Z+EmU3JrTFkPzPdtxGJpJo3BQl0PG3f7KoluL2omKuSHvlEJJZ8Meuk2VTuqhkuXxE/6FhOGnn/gzRKGRandfrU8+ydxDmeOGkYrW4CMOx9feYE/5sWuPXst8kgVkdFf/nR1PXaEzs39NgCsC2Lo3yrnhYetxYYHhdSQq83/kJNd9cdcgNOO+42TL+aIVWXFe0nvFDHjziG7gXgsjZ+0WSqhX+UQXGL8dw0N2KtZnVUFqGTAnDKlS01Yvfo2F+tIZMfvM5AYzjRZGwXLgyKo12z0AJvqAngtRJMLqrigi7AqIDmbLem17OzWomAOepjrR/866F/a+ZSgBfeneqHJJuN69FAomT94Y29sXgSTIIGGd7Pn6c0xkru1n0mkrA/u9fdxm60vIzJnRErfBwnS5fwH0hjfO7xP0rxJD2f2mrL+KABJPtNaUk7EVtdJcIqWlQ9exvACrVlAPsbaude3/mhO8IwyMcHutnI8RWcpYkqq3Anpaw22CU+/r1Mj9CfAvbsy5kJnJAOfo32VN/Dx4o2kFjbd4R99UGmhpQh4IyHVwm79dOiyWExHZKW7tnoc2WSFnme6KEeMgA3Yb0AtmshbqZwqsbP+r8pHKtkrIILEa1HQyjDDtA0Wu+Xy2MkLoQVBWLjpKJwPqxQVAWP84Zixr5dNIg=
   on:
