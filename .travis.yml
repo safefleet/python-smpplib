@@ -3,10 +3,10 @@ language: python
 python:
   - 3.6
 
-#install:
-#  - pip install -U twine
-#  - pip install pycodestyle
-#
+install:
+  - pip install pytest
+  - pip install pycodestyle
+
 #install:
 #  - echo ${PYPI_USERNAME}
 #  - echo ${PYPI_PASSWORD}
