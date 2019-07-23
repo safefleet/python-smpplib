@@ -3,7 +3,7 @@ import sys
 
 setup(
     name="aiosmpp",
-    version='1.0.1',
+    version='1.0.2',
     url='https://github.com/tpark-platform/aiosmpp',
     description='SMPP library for python based on asyncio',
     packages=find_packages(),
