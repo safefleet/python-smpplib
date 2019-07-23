@@ -1,15 +1,16 @@
 from setuptools import setup, find_packages
 import sys
 
-setup(name="python-smpplib",
-      version='1.0.1',
-      url='https://github.com/podshumok/python-smpplib',
-      description='SMPP library for python',
-      packages=find_packages(),
-      install_requires=['six'],
-      tests_require=['pytest', 'mock'],
-      zip_safe=True,
-      classifiers=[
+setup(
+    name="aiosmpp",
+    version='1.0.1',
+    url='https://github.com/tpark-platform/aiosmpp',
+    description='SMPP library for python based on asyncio',
+    packages=find_packages(),
+    install_requires=['six'],
+    tests_require=['pytest', 'mock'],
+    zip_safe=True,
+    classifiers=[
         'Development Status :: 4 - Beta',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
@@ -21,5 +22,5 @@ setup(name="python-smpplib",
         'Topic :: Communications :: Telephony',
         'Intended Audience :: Telecommunications Industry',
         'License :: OSI Approved',
-        ],
+    ],
 )

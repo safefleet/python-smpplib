@@ -1,0 +1,26 @@
+language: python
+
+python:
+  - 3.6
+
+#install:
+#  - pip install -U twine
+#  - pip install pycodestyle
+
+install:
+  - echo ${PYPI_USERNAME}
+  - echo ${PYPI_PASSWORD}
+
+#before_script:
+#  - mkdir -p ~/.ssh
+#  - echo ${SSH_PRIVATE_KEY} | base64 -d > ~/.ssh/id_rsa
+#  - chmod go-rwx ~/.ssh/id_rsa
+
+#script:
+#  - python setup.py sdist
+#  - twine upload dist/*
+
+deploy:
+  provider: pypi
+  on:
+    branch: asyncio
