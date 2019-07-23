@@ -7,6 +7,10 @@ install:
   - pip install pycodestyle
   - pip install -U twine
 
+script:
+  - python setup.py sdist
+  - twine upload dist/*
+
 deploy:
   provider: script
   script:
